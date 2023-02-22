@@ -1,4 +1,4 @@
-# base.gov and DRE scrapper and translator
+# base.gov and DRE scraper and translator
 This project presents the code used to scrape the base.gov and DRE websites to a JSON format. Additionally, it further contains the code used to export the acquired JSON data to excel format. Finally, the translation folder stores the code to perform the translation of the free text variables from Portuguese to English.
 
 # Citation
