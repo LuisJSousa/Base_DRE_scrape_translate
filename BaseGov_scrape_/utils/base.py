@@ -9,14 +9,14 @@ import time
 import os
 from .pdfparse import parse_file
 import traceback
-
-
+ 
+ 
 def download_pdf(driver,url,path, timeout=20):
     if "azores.gov.pt" in url: 
         id_contrato_azores = url.split("/")[-1]
         url = 'https://jo.azores.gov.pt/api/public/ato/{}/pdfOriginal'.format(id_contrato_azores)
         print(url)
-
+ 
     o=len(list(path.glob("*.pdf")))
     driver.get(url)
     end_time = time.time() + timeout
@@ -26,12 +26,12 @@ def download_pdf(driver,url,path, timeout=20):
         if time.time() > end_time:
             print("File not found within time")
             return False
-
+ 
     if o<len(list(path.glob("*.pdf"))):
         return sorted(path.iterdir(), key=os.path.getmtime)[-1]
   
 def ScrapeBase(pdf_folder):
-
+ 
     PAGES_TO_CRAWL = 1 # Numero de paginas a obter
     
     API_url = 'https://www.base.gov.pt/Base4/pt/resultados/'
@@ -43,10 +43,11 @@ def ScrapeBase(pdf_folder):
         'size': 25
     }
     headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:66.0) Gecko/20100101 Firefox/66.0",
-    "Accept-Encoding": "*",
-    "Connection": "keep-alive"
-}
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:66.0) Gecko/20100101 Firefox/66.0",
+        "Accept-Encoding": "*",
+        "Connection": "keep-alive",
+        "Accept": "application/json"
+    }
     
     # Obter lista de contratos
     contratos = []
@@ -82,18 +83,26 @@ def ScrapeBase(pdf_folder):
     for contrato in contratos:
         details_query["id"] = contrato["id"]
         request = requests.post(API_url, data=details_query) #fazer pedido post para detalhes
+        print(request.text)
         data = request.json() #descodificar a resposta
         contrato["extra_details"] = data #adicionar detalhes extra
-
+ 
         try:     
             anuncio_id=data["announcementId"]
         
-            response = requests.get(detalhe_anuncio_url.format(anuncio_id), headers=headers, timeout=20)
+            BASE_URL = 'https://www.base.gov.pt/Base4/pt/resultados/'
+            query = {
+                'type': 'detail_anuncios',
+                'id': anuncio_id
+            }
+            
+            response = requests.post(BASE_URL, data=query, headers=headers, timeout=20)
+            
             time.sleep(0.25)
             print(detalhe_anuncio_url.format(anuncio_id))
             try:
                 data = response.json()
-
+ 
                 anuncio_url = data["reference"]
     
                 fn = download_pdf(driver,anuncio_url,anuncio_path_base)
@@ -105,14 +114,16 @@ def ScrapeBase(pdf_folder):
                 
                 else:
                     print("PDF não encontrado!")
-
+ 
             
                 contrato["anuncio_details"] = data
             except:
                 print("PDF não encontrado!")
+                print(detalhe_anuncio_url.format(anuncio_id))
                 print(traceback.format_exc())
         except:
             print("handled successfully")
+            print(traceback.format_exc())
     
     driver.close()
     print(f'Total de contratos: {len(contratos)}')
